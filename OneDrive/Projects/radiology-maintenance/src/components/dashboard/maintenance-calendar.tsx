@@ -3,25 +3,71 @@
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 interface MaintenanceEvent {
     date: Date
     title: string
     type: 'scheduled' | 'urgent'
+    schedule_id: string
 }
 
 interface MaintenanceCalendarProps {
     events?: MaintenanceEvent[]
 }
 
-export function MaintenanceCalendar({ events = [] }: MaintenanceCalendarProps) {
+export function MaintenanceCalendar({ events: initialEvents = [] }: MaintenanceCalendarProps) {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
     const [mounted, setMounted] = useState(false)
+    const [events, setEvents] = useState<MaintenanceEvent[]>(initialEvents)
+    const supabase = createClient()
+    const { toast } = useToast()
 
     useEffect(() => {
-        setSelectedDate(new Date())
+        fetchSchedules()
         setMounted(true)
     }, [])
+
+    useEffect(() => {
+        // Set selected date to first event or today
+        if (events.length > 0) {
+            const earliestEvent = events.reduce((earliest, event) =>
+                event.date < earliest.date ? event : earliest
+            )
+            setSelectedDate(earliestEvent.date)
+        } else {
+            setSelectedDate(new Date())
+        }
+    }, [events])
+
+    const fetchSchedules = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('schedules')
+                .select('schedule_id, next_due, equipment_id, maintenance_type, inventory(equipment_name)')
+                .eq('is_active', true)
+                .order('next_due', { ascending: true })
+
+            if (error) throw error
+
+            const formattedEvents: MaintenanceEvent[] = (data || []).map((schedule: any) => ({
+                date: new Date(schedule.next_due),
+                title: `${schedule.inventory?.equipment_name || 'Equipment'} - ${schedule.maintenance_type}`,
+                type: new Date(schedule.next_due) < new Date() ? 'urgent' : 'scheduled',
+                schedule_id: schedule.schedule_id,
+            }))
+
+            setEvents(formattedEvents)
+        } catch (error) {
+            console.error('Error fetching schedules:', error)
+            toast({
+                title: 'Error',
+                description: 'Failed to fetch maintenance schedules',
+                variant: 'destructive',
+            })
+        }
+    }
 
     const datesWithEvents = events.map((event) => event.date)
 

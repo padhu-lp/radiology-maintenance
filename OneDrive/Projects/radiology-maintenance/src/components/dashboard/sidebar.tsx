@@ -37,8 +37,9 @@ export function Sidebar() {
     return (
         <div className="w-64 bg-slate-900 text-white">
             <div className="p-6">
-                <h1 className="text-xl font-bold">BalRad</h1>
+                <h1 className="text-xl font-bold">RadServe</h1>
                 <p className="text-xs text-slate-400 mt-1">Radiology Equipment Maintenanace Systems & Services</p>
+                <p className="text-xs text-slate-400 mt-1">By Bala</p>
             </div>
 
             <nav className="mt-6">

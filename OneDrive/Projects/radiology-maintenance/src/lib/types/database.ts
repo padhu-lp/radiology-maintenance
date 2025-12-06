@@ -136,6 +136,7 @@ export type Database = {
                 part_id: string
                 part_number: string
                 part_name: string
+                equipment_id?: string
                 manufacturer_id?: number
                 category?: string
                 unit_cost?: number
@@ -147,6 +148,34 @@ export type Database = {
                 lead_time_days?: number
                 last_order_date?: string
                 expiry_date?: string
+                serial_number?: string
+                division?: string
+                country?: string
+                eq_status?: string
+                eq_substatus?: string
+                service_partner?: string
+                service_partner_name?: string
+                location_code?: string
+                location_name?: string
+                location_short_form?: string
+                location_street?: string
+                location_city?: string
+                location_zip_code?: string
+                software_version?: string
+                date_of_delivery?: string
+                install_date?: string
+                bl_warranty_start_date?: string
+                bl_warranty_end_date?: string
+                customer_warranty_start_date?: string
+                customer_warranty_end_date?: string
+                hq_purchase_order?: string
+                hq_sales_order?: string
+                hc_submission_no?: string
+                debitor?: string
+                end_of_delivery_date?: string
+                end_of_support_date?: string
+                last_country_activity?: string
+                license_type?: string
                 is_active: boolean
                 created_date: string
             }
