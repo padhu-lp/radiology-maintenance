@@ -62,7 +62,7 @@ export function PartsUsageReport() {
       if (error) throw error
 
       const uniqueCategories = Array.from(
-        new Set((data || []).map((p) => p.category).filter(Boolean))
+        new Set(((data as Array<{ category: string | null }>) || []).map((p) => p.category).filter(Boolean))
       ) as string[]
       setCategories(uniqueCategories.sort())
     } catch (error) {
