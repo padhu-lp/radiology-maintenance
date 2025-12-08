@@ -15,6 +15,7 @@ import {
     BarChart3,
     Building2,
     Store,
+    Shield,
 } from 'lucide-react'
 
 const navigation = [
@@ -29,6 +30,7 @@ const navigation = [
     { name: 'Reports', href: '/reports', icon: BarChart3 },
     { name: 'Schedule', href: '/schedule', icon: Calendar },
     { name: 'Alerts', href: '/alerts', icon: AlertTriangle },
+    { name: 'Admin Users', href: '/admin/users', icon: Shield },
 ]
 
 export function Sidebar() {
