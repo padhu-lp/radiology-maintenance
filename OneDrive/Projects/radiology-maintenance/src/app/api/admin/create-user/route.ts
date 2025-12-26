@@ -63,12 +63,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Create user profile with must_change_password flag
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: data.user.id,
+        must_change_password: true, // Force password change on first login
+      })
+
+    if (profileError) {
+      console.error('Error creating user profile:', profileError)
+      // Continue anyway - the user is created, profile can be added later
+    }
+
     return NextResponse.json({
       success: true,
       user: {
         id: data.user.id,
         email: data.user.email,
-        message: 'User created successfully. They can now log in with their credentials.'
+        message: 'User created successfully. They will be prompted to change password on first login.'
       }
     })
   } catch (error) {

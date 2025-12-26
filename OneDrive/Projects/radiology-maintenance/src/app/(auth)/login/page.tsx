@@ -35,7 +35,7 @@ export default function LoginPage() {
         setIsLoading(true)
         setError(null)
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
             email: data.email,
             password: data.password,
         })
@@ -44,6 +44,20 @@ export default function LoginPage() {
             setError(error.message)
             setIsLoading(false)
             return
+        }
+
+        // Check if user must change password
+        if (authData.user) {
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('must_change_password')
+                .eq('user_id', authData.user.id)
+                .single()
+
+            if (profile?.must_change_password) {
+                router.push('/change-password')
+                return
+            }
         }
 
         router.push('/dashboard')
@@ -92,6 +106,12 @@ export default function LoginPage() {
                             {errors.password && (
                                 <p className="text-sm text-red-500">{errors.password.message}</p>
                             )}
+                        </div>
+
+                        <div className="flex items-center justify-end mb-4">
+                            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                                Forgot password?
+                            </Link>
                         </div>
 
                         <Button type="submit" className="w-full" disabled={isLoading}>

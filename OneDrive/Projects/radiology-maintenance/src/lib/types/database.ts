@@ -223,6 +223,21 @@ export type Database = {
             Insert: Omit<Database['public']['technicians']['Row'], 'technician_id' | 'created_date'>
             Update: Partial<Database['public']['technicians']['Insert']>
         }
+        user_profiles: {
+            Row: {
+                user_id: string
+                must_change_password: boolean
+                password_changed_at?: string
+                created_at: string
+                updated_at: string
+            }
+            Insert: {
+                user_id: string
+                must_change_password?: boolean
+                password_changed_at?: string
+            }
+            Update: Partial<Database['public']['user_profiles']['Insert']>
+        }
     }
 }
 
