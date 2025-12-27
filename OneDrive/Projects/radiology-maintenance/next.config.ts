@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
     tsconfigPath: "./tsconfig.json",
     ignoreBuildErrors: true,
   },
+  // Expose server-side environment variables
+  env: {
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  },
 };
 
 export default nextConfig;
