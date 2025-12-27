@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { Database } from '@/lib/types/database'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,36 +30,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get server client with admin privileges
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
+    // Create admin client with service role key (bypasses RLS)
+    const supabaseAdmin = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            try {
-              cookieStore.set({ name, value, ...options })
-            } catch (error) {
-              // Handle error
-            }
-          },
-          remove(name: string, options: any) {
-            try {
-              cookieStore.set({ name, value: '', ...options })
-            } catch (error) {
-              // Handle error
-            }
-          },
-        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
       }
     )
 
     // Create user with admin API
-    const { data, error } = await supabase.auth.admin.createUser({
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Skip email verification
@@ -73,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile with must_change_password flag
-    const { error: profileError } = await supabase
+    const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
         user_id: data.user.id,
