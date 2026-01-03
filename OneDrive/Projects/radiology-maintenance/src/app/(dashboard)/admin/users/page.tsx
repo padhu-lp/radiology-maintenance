@@ -12,6 +12,9 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
+// Feature flag: Set to true to enable user creation
+const ENABLE_USER_CREATION = false
+
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -116,7 +119,7 @@ export default function AdminUsersPage() {
                   id="email"
                   type="email"
                   placeholder="tester@example.com"
-                  disabled={isLoading}
+                  disabled={!ENABLE_USER_CREATION || isLoading}
                 />
                 {errors.email && (
                   <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -130,7 +133,7 @@ export default function AdminUsersPage() {
                   id="password"
                   type="password"
                   placeholder="At least 6 characters"
-                  disabled={isLoading}
+                  disabled={!ENABLE_USER_CREATION || isLoading}
                 />
                 {errors.password && (
                   <p className="text-sm text-red-500">{errors.password.message}</p>
@@ -144,23 +147,32 @@ export default function AdminUsersPage() {
                   id="confirmPassword"
                   type="password"
                   placeholder="Confirm password"
-                  disabled={isLoading}
+                  disabled={!ENABLE_USER_CREATION || isLoading}
                 />
                 {errors.confirmPassword && (
                   <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={!ENABLE_USER_CREATION || isLoading}>
                 {isLoading ? (
                   <>
                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
                   </>
-                ) : (
+                ) : ENABLE_USER_CREATION ? (
                   'Create User'
+                ) : (
+                  'User Creation Disabled'
                 )}
               </Button>
+              {!ENABLE_USER_CREATION && (
+                <Alert>
+                  <AlertDescription className="text-sm">
+                    User creation is currently disabled. To enable it, set <code className="bg-gray-100 px-1 py-0.5 rounded">ENABLE_USER_CREATION = true</code> in the page component.
+                  </AlertDescription>
+                </Alert>
+              )}
             </form>
           </CardContent>
         </Card>
