@@ -175,15 +175,15 @@ CREATE INDEX IF NOT EXISTS idx_qc_tests_test_date ON public.qc_tests(test_date);
 -- WARNING: Only run these if you've confirmed data migration is complete
 -- Comment these out if you want to keep the old schemas temporarily
 
--- DROP SCHEMA IF EXISTS quality CASCADE;
--- DROP SCHEMA IF EXISTS maintenance CASCADE;
--- DROP SCHEMA IF EXISTS equipment CASCADE;
+DROP SCHEMA IF EXISTS quality CASCADE;
+DROP SCHEMA IF EXISTS maintenance CASCADE;
+DROP SCHEMA IF EXISTS equipment CASCADE;
 
 -- ============================================================================
 -- VERIFICATION QUERIES
 -- ============================================================================
 -- Run these to verify the migration was successful:
 
--- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
--- SELECT constraint_name, table_name, column_name, foreign_table_name FROM information_schema.table_constraints
--- WHERE table_schema = 'public' AND constraint_type = 'FOREIGN KEY';
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+SELECT constraint_name, table_name, column_name, foreign_table_name FROM information_schema.table_constraints
+  WHERE table_schema = 'public' AND constraint_type = 'FOREIGN KEY';

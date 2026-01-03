@@ -60,11 +60,13 @@ export default function EquipmentPage() {
             if (error) throw error
             setEquipment(data || [])
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch equipment'
             toast({
                 title: 'Error',
-                description: 'Failed to fetch equipment',
+                description: errorMessage,
                 variant: 'destructive',
             })
+            console.error('Fetch equipment error:', error)
         } finally {
             setLoading(false)
         }
@@ -148,42 +150,50 @@ export default function EquipmentPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredEquipment.map((item) => (
-                                <TableRow key={item.equipment_id}>
-                                    <TableCell className="font-medium">{item.inventory_number}</TableCell>
-                                    <TableCell>{item.equipment_name}</TableCell>
-                                    <TableCell>{item.equipment_type}</TableCell>
-                                    <TableCell>{item.manufacturers?.manufacturer_name || '-'}</TableCell>
-                                    <TableCell>
-                                        {item.locations ?
-                                            `${item.locations.department_name} - ${item.locations.room_number}` :
-                                            '-'
-                                        }
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                                    <TableCell>{item.risk_level && getRiskBadge(item.risk_level)}</TableCell>
-                                    <TableCell>
-                                        {item.warranty_expiry
-                                            ? new Date(item.warranty_expiry).toLocaleDateString()
-                                            : '-'
-                                        }
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Link href={`/equipment/${item.equipment_id}`}>
-                                                <Button variant="ghost" size="sm">
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/equipment/${item.equipment_id}/edit`}>
-                                                <Button variant="ghost" size="sm">
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                            </Link>
-                                        </div>
+                            {filteredEquipment.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                                        No equipment found
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : (
+                                filteredEquipment.map((item) => (
+                                    <TableRow key={item.equipment_id}>
+                                        <TableCell className="font-medium">{item.inventory_number}</TableCell>
+                                        <TableCell>{item.equipment_name}</TableCell>
+                                        <TableCell>{item.equipment_type}</TableCell>
+                                        <TableCell>{item.manufacturers?.manufacturer_name || '-'}</TableCell>
+                                        <TableCell>
+                                            {item.locations ?
+                                                `${item.locations.department_name} - ${item.locations.room_number}` :
+                                                '-'
+                                            }
+                                        </TableCell>
+                                        <TableCell>{getStatusBadge(item.status)}</TableCell>
+                                        <TableCell>{item.risk_level && getRiskBadge(item.risk_level)}</TableCell>
+                                        <TableCell>
+                                            {item.warranty_expiry
+                                                ? new Date(item.warranty_expiry).toLocaleDateString()
+                                                : '-'
+                                            }
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-2">
+                                                <Link href={`/equipment/${item.equipment_id}`}>
+                                                    <Button variant="ghost" size="sm">
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Link href={`/equipment/${item.equipment_id}/edit`}>
+                                                    <Button variant="ghost" size="sm">
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 )}

@@ -19,26 +19,65 @@ interface SelectComponentProps extends SelectProps {
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectComponentProps>(
-  ({ onValueChange, children, value, ...props }, _ref) => {
+  ({ onValueChange, children, value, ...props }, ref) => {
+    // Use value prop if provided, otherwise manage internal state
+    const isControlled = value !== undefined
     const [internalValue, setInternalValue] = React.useState(value || '')
+    const currentValue = isControlled ? value : internalValue
+
+    // Update internal value when controlled value changes
+    React.useEffect(() => {
+      if (isControlled) {
+        setInternalValue(value || '')
+      }
+    }, [value, isControlled])
+
+    // Extract SelectValue and SelectContent/SelectItems from children
+    let selectValueElement: React.ReactNode = null
+    const selectItemsElements: React.ReactNode[] = []
+
+    React.Children.forEach(children, (child) => {
+      if (React.isValidElement(child)) {
+        if ((child.type as React.ComponentType)?.displayName === 'SelectValue') {
+          selectValueElement = child
+        } else if ((child.type as React.ComponentType)?.displayName === 'SelectContent') {
+          // Extract items from SelectContent
+          const childProps = child.props as { children?: React.ReactNode }
+          if (childProps.children) {
+            const contentChildren = Array.isArray(childProps.children) ? childProps.children : [childProps.children]
+            contentChildren.forEach((item: React.ReactNode) => {
+              if (item) {
+                selectItemsElements.push(item)
+              }
+            })
+          }
+        }
+      }
+    })
+
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newValue = e.target.value
+      if (!isControlled) {
+        setInternalValue(newValue)
+      }
+      onValueChange?.(newValue)
+    }
 
     return (
-      <SelectContext.Provider value={{ value: internalValue as string, onValueChange }}>
-        <div>
-          {React.Children.map(children, (child) => {
-            if (React.isValidElement(child)) {
-              return React.cloneElement(child, {
-                ...props,
-                value: internalValue,
-                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                  const newValue = e.target.value
-                  setInternalValue(newValue)
-                  onValueChange?.(newValue)
-                },
-              } as Record<string, unknown>)
-            }
-            return child
-          })}
+      <SelectContext.Provider value={{ value: currentValue as string, onValueChange }}>
+        <div className="relative w-full">
+          <select
+            className={cn(
+              "flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            )}
+            onChange={handleChange}
+            value={currentValue}
+            {...props}
+          >
+            {selectValueElement}
+            {selectItemsElements}
+          </select>
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
         </div>
       </SelectContext.Provider>
     )
@@ -60,6 +99,7 @@ interface SelectValueProps {
 const SelectValue = ({ children, placeholder }: SelectValueProps) => (
   <option value="">{placeholder || children}</option>
 )
+SelectValue.displayName = "SelectValue"
 
 interface SelectTriggerProps {
   children?: React.ReactNode
@@ -69,31 +109,8 @@ interface SelectTriggerProps {
 }
 
 const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
-  ({ children, className, onChange, ...props }, ref) => {
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      if (onChange) {
-        onChange(e)
-      }
-    }
-
-    const { value, ...selectProps } = props as Record<string, unknown> & { value?: string }
-
-    return (
-      <div className="relative w-full" ref={ref}>
-        <select
-          className={cn(
-            "flex h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-            className
-          )}
-          onChange={handleChange}
-          value={value}
-          {...selectProps}
-        >
-          {children}
-        </select>
-        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
-      </div>
-    )
+  ({ children, className }, ref) => {
+    return <div ref={ref} className={className}>{children}</div>
   }
 )
 SelectTrigger.displayName = "SelectTrigger"
@@ -102,7 +119,11 @@ interface SelectContentProps {
   children?: React.ReactNode
 }
 
-const SelectContent = ({ children }: SelectContentProps) => <>{children}</>
+const SelectContent = ({ children }: SelectContentProps) => {
+  // SelectContent is now just a wrapper - the Select component will extract its children
+  return <>{children}</>
+}
+SelectContent.displayName = "SelectContent"
 
 interface SelectItemProps extends React.OptionHTMLAttributes<HTMLOptionElement> {
   value: string
@@ -114,6 +135,8 @@ const SelectItem = ({ value, children, ...props }: SelectItemProps) => (
     {children}
   </option>
 )
+SelectItem.displayName = "SelectItem"
+
 const SelectSeparator = () => null
 const SelectScrollUpButton = () => null
 const SelectScrollDownButton = () => null

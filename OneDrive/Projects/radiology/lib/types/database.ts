@@ -151,6 +151,16 @@ export type Database = {
             }
         }
     }
+    technicians: {
+        Row: {
+            id: string;
+            name: string;
+            contact: string;
+            specialization: string;
+        }
+        Insert: Omit<Database['technicians']['Row'], 'id'>
+        Update: Partial<Database['technicians']['Insert']>
+    }
 }
 
 // Simplified type for now - you can use 'any' if needed

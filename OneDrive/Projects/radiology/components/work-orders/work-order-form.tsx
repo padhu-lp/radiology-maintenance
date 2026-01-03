@@ -1,187 +1,354 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
 } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
-const workOrderSchema = z.object({
-    equipment_id: z.string().uuid('Please select equipment'),
-    workorder_type: z.enum(['Preventive', 'Corrective', 'Emergency', 'Calibration']),
-    priority: z.enum(['Emergency', 'High', 'Medium', 'Low']),
-    problem_description: z.string().min(10, 'Description must be at least 10 characters'),
-    requested_by: z.string().min(2, 'Requester name is required'),
-})
+type Equipment = {
+  equipment_id: string
+  inventory_number: string
+  equipment_name: string
+}
 
-type WorkOrderFormData = z.infer<typeof workOrderSchema>
+type Technician = {
+  id: string
+  name: string
+}
 
-export function WorkOrderForm() {
-    const router = useRouter()
-    const supabase = createClient()
-    const { toast } = useToast()
-    const [isSubmitting, setIsSubmitting] = useState(false)
+export default function WorkOrderForm() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
 
-    const {
-        register,
-        handleSubmit,
-        setValue,
-        formState: { errors }
-    } = useForm<WorkOrderFormData>({
-        resolver: zodResolver(workOrderSchema),
+  const [loading, setLoading] = useState(false)
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [formData, setFormData] = useState({
+    workorder_number: '',
+    equipment_id: '',
+    workorder_type: 'Corrective',
+    priority: 'Medium',
+    requested_by: '',
+    assigned_technician: '',
+    service_provider: '',
+    problem_description: '',
+    fault_code: '',
+    scheduled_date: '',
+  })
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [equipmentRes, techniciansRes] = await Promise.all([
+        supabase.from('inventory').select('equipment_id, inventory_number, equipment_name').order('equipment_name'),
+        supabase.from('technicians').select('id, name').order('name'),
+      ])
+
+      if (equipmentRes.error) throw equipmentRes.error
+      if (techniciansRes.error) throw techniciansRes.error
+
+      setEquipment(equipmentRes.data || [])
+      setTechnicians(techniciansRes.data || [])
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch equipment and technicians'
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+      console.error('Fetch error:', error)
+    }
+  }
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    console.log('handleSelectChange called for', name, 'with value', value) // Added for debugging
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      }
+      console.log('Updated form data:', updated) // Added for debugging
+      return updated
     })
+  }
 
-    const onSubmit = async (data: WorkOrderFormData) => {
-        setIsSubmitting(true)
+  const generateWorkOrderNumber = () => {
+    const timestamp = Date.now()
+    const random = Math.floor(Math.random() * 1000)
+    return `WO-${timestamp}-${random}`
+  }
 
-        try {
-            // Generate work order number
-            const workorderNumber = `WO-${Date.now()}`
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-            const { error } = await supabase
-                .from('work_orders')
-                .insert([
-                    {
-                        ...data,
-                        workorder_number: workorderNumber,
-                        status: 'Open',
-                        request_date: new Date().toISOString(),
-                    }
-                ])
+    console.log('Submitting form with data:', formData) // Added for debugging
 
-            if (error) throw error
-
-            toast({
-                title: 'Success',
-                description: 'Work order created successfully',
-            })
-
-            router.push('/work-orders')
-            router.refresh()
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: 'Failed to create work order',
-                variant: 'destructive',
-            })
-        } finally {
-            setIsSubmitting(false)
-        }
+    // Validation
+    if (!formData.workorder_number || !formData.equipment_id) {
+      toast({
+        title: 'Validation Error',
+        description: 'Work order number and equipment are required',
+        variant: 'destructive',
+      })
+      return
     }
 
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Create New Work Order</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="equipment_id">Equipment *</Label>
-                            <Select onValueChange={(value) => setValue('equipment_id', value)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select equipment" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {/* This should be populated from database */}
-                                    <SelectItem value="uuid-1">Ultrasound Machine #1</SelectItem>
-                                    <SelectItem value="uuid-2">CT Scanner #1</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.equipment_id && (
-                                <p className="text-sm text-red-500">{errors.equipment_id.message}</p>
-                            )}
-                        </div>
+    setLoading(true)
 
-                        <div className="space-y-2">
-                            <Label htmlFor="workorder_type">Type *</Label>
-                            <Select onValueChange={(value: any) => setValue('workorder_type', value)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Preventive">Preventive</SelectItem>
-                                    <SelectItem value="Corrective">Corrective</SelectItem>
-                                    <SelectItem value="Emergency">Emergency</SelectItem>
-                                    <SelectItem value="Calibration">Calibration</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.workorder_type && (
-                                <p className="text-sm text-red-500">{errors.workorder_type.message}</p>
-                            )}
-                        </div>
+    try {
+      const payload = {
+        workorder_number: formData.workorder_number,
+        equipment_id: formData.equipment_id,
+        workorder_type: formData.workorder_type,
+        priority: formData.priority,
+        requested_by: formData.requested_by || null,
+        assigned_technician: formData.assigned_technician || null,
+        service_provider: formData.service_provider || null,
+        problem_description: formData.problem_description || null,
+        fault_code: formData.fault_code || null,
+        scheduled_date: formData.scheduled_date || null,
+        request_date: new Date().toISOString(),
+        status: 'Open',
+      }
 
-                        <div className="space-y-2">
-                            <Label htmlFor="priority">Priority *</Label>
-                            <Select onValueChange={(value: any) => setValue('priority', value)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Emergency">Emergency</SelectItem>
-                                    <SelectItem value="High">High</SelectItem>
-                                    <SelectItem value="Medium">Medium</SelectItem>
-                                    <SelectItem value="Low">Low</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.priority && (
-                                <p className="text-sm text-red-500">{errors.priority.message}</p>
-                            )}
-                        </div>
+      const { error } = await supabase
+        .from('work_orders')
+        .insert([payload])
 
-                        <div className="space-y-2">
-                            <Label htmlFor="requested_by">Requested By *</Label>
-                            <Input
-                                {...register('requested_by')}
-                                placeholder="Enter requester name"
-                            />
-                            {errors.requested_by && (
-                                <p className="text-sm text-red-500">{errors.requested_by.message}</p>
-                            )}
-                        </div>
-                    </div>
+      if (error) throw error
 
-                    <div className="space-y-2">
-                        <Label htmlFor="problem_description">Problem Description *</Label>
-                        <Textarea
-                            {...register('problem_description')}
-                            rows={4}
-                            placeholder="Describe the problem in detail..."
-                        />
-                        {errors.problem_description && (
-                            <p className="text-sm text-red-500">{errors.problem_description.message}</p>
-                        )}
-                    </div>
+      toast({
+        title: 'Success',
+        description: 'Work order created successfully',
+      })
 
-                    <div className="flex justify-end gap-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => router.push('/work-orders')}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating...' : 'Create Work Order'}
-                        </Button>
-                    </div>
-                </form>
-            </CardContent>
-        </Card>
-    )
+      router.push('/work-orders')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create work order'
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href="/work-orders">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Create Work Order</h1>
+          <p className="text-gray-600">Create a new maintenance work order</p>
+        </div>
+      </div>
+
+      <Card className="p-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Work Order Basic Info */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Work Order Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="workorder_number">Work Order Number *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="workorder_number"
+                    name="workorder_number"
+                    placeholder="Auto-generate or enter manually"
+                    value={formData.workorder_number}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const woNumber = generateWorkOrderNumber()
+                      setFormData((prev) => ({ ...prev, workorder_number: woNumber }))
+                    }}
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="equipment_id">Equipment *</Label>
+                <Select value={formData.equipment_id} onValueChange={(value) => handleSelectChange('equipment_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={formData.equipment_id || "Select equipment"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipment.map((eq) => (
+                      <SelectItem key={eq.equipment_id} value={eq.equipment_id}>
+                        {eq.inventory_number} - {eq.equipment_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workorder_type">Work Order Type</Label>
+                <Select value={formData.workorder_type} onValueChange={(value) => handleSelectChange('workorder_type', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Preventive">Preventive</SelectItem>
+                    <SelectItem value="Corrective">Corrective</SelectItem>
+                    <SelectItem value="Emergency">Emergency</SelectItem>
+                    <SelectItem value="Calibration">Calibration</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select value={formData.priority} onValueChange={(value) => handleSelectChange('priority', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Emergency">Emergency</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Request Details */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Request Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="requested_by">Requested By</Label>
+                <Input
+                  id="requested_by"
+                  name="requested_by"
+                  placeholder="Name of person requesting"
+                  value={formData.requested_by}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="scheduled_date">Scheduled Date</Label>
+                <Input
+                  id="scheduled_date"
+                  name="scheduled_date"
+                  type="date"
+                  value={formData.scheduled_date}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fault_code">Fault Code</Label>
+                <Input
+                  id="fault_code"
+                  name="fault_code"
+                  placeholder="e.g., ERR-001"
+                  value={formData.fault_code}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="service_provider">Service Provider</Label>
+                <Input
+                  id="service_provider"
+                  name="service_provider"
+                  placeholder="External service provider (if applicable)"
+                  value={formData.service_provider}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="problem_description">Problem Description</Label>
+              <Textarea
+                id="problem_description"
+                name="problem_description"
+                placeholder="Describe the issue in detail"
+                value={formData.problem_description}
+                onChange={handleInputChange}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          {/* Assignment */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Assignment</h2>
+            <div className="space-y-2">
+              <Label htmlFor="assigned_technician">Assigned Technician</Label>
+              <Select value={formData.assigned_technician} onValueChange={(value) => handleSelectChange('assigned_technician', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex gap-4 justify-end pt-6 border-t">
+            <Link href="/work-orders">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating Work Order...' : 'Create Work Order'}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  )
 }
