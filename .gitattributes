@@ -1,0 +1,17 @@
+# Normalise line endings. Without this, files committed from Windows can carry
+# CRLF into the repo; a shell script with CRLF fails on Linux with
+# "bad interpreter: /usr/bin/env bash^M", which is not an obvious error message.
+* text=auto eol=lf
+
+# Never let these become CRLF - they are executed on the server.
+*.sh text eol=lf
+
+# Binary files: leave alone.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
