@@ -15,7 +15,11 @@ module.exports = {
       // Invoke the Next binary directly. Going through `npm start` adds a
       // shell layer that swallows signals, so PM2 restarts become unreliable.
       script: 'node_modules/next/dist/bin/next',
-      args: 'start -p 3100',
+
+      // -H 127.0.0.1 is important: without it Next binds 0.0.0.0 and the app is
+      // reachable at http://<server-ip>:3100, bypassing Nginx and TLS. Nginx
+      // proxies to 127.0.0.1:3100, so loopback-only loses nothing.
+      args: 'start -p 3100 -H 127.0.0.1',
 
       instances: 1,
       exec_mode: 'fork',

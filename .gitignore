@@ -34,6 +34,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 *.pem
+.claude/settings.local.json
 
 # IDE
 .vscode/
