@@ -103,6 +103,7 @@ export default async function ServiceRequestDetailPage({
             requestNumber={r.request_number}
             status={r.status}
             triageNotes={r.triage_notes}
+            equipmentId={r.equipment_id}
           />
         </div>
 

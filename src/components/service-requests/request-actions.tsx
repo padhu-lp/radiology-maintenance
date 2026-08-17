@@ -23,11 +23,14 @@ export function RequestActions({
   requestNumber,
   status,
   triageNotes,
+  equipmentId,
 }: {
   requestId: string
   requestNumber: string
   status: RequestStatus
   triageNotes: string | null
+  /** Null when the caller could not identify the machine — blocks conversion. */
+  equipmentId: string | null
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -151,7 +154,16 @@ export function RequestActions({
               Resolve without a visit
             </Button>
 
-            <Button size="sm" variant="outline" disabled title="Available once work orders are rebuilt">
+            <Button
+              size="sm"
+              disabled={busy || !equipmentId}
+              title={equipmentId
+                ? undefined
+                : 'Attach the equipment to this request first — a work order must name the machine'}
+              onClick={() => router.push(
+                `/work-orders/new?equipment=${equipmentId}&request=${requestId}`
+              )}
+            >
               Convert to work order
             </Button>
 
