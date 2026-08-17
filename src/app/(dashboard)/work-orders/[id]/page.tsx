@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { TechnicianAssignments, type Assignment } from '@/components/work-orders/technician-assignments'
+import { PartsUsed, type PartUsage } from '@/components/work-orders/parts-used'
 import { Pencil } from 'lucide-react'
 import { DASH, date, money, relative } from '@/lib/format'
 import type { WorkOrder } from '@/lib/types/database'
@@ -37,7 +38,9 @@ export default async function WorkOrderDetailPage({
                 locations(department_name)),
       service_requests(request_id, request_number, problem_summary),
       workorder_technicians(assignment_id, technician_id, role, hours_worked, notes,
-        technicians(first_name, last_name, technician_code, specialization))`)
+        technicians(first_name, last_name, technician_code, specialization)),
+      workorder_parts(usage_id, part_id, quantity, unit_cost, line_cost, notes,
+        parts_inventory(part_code, part_name, part_number, unit_of_measure, quantity_on_hand))`)
     .eq('workorder_id', id)
     .single()
 
@@ -54,6 +57,7 @@ export default async function WorkOrderDetailPage({
       request_id: string; request_number: string; problem_summary: string
     } | null
     workorder_technicians: Assignment[]
+    workorder_parts: PartUsage[]
   }
 
   const locked = w.status === 'Completed' || w.status === 'Cancelled'
@@ -117,12 +121,12 @@ export default async function WorkOrderDetailPage({
             locked={locked}
           />
 
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Parts used appear here once the parts catalogue is built. Recording a part
-              will decrement stock and update the cost below automatically.
-            </CardContent>
-          </Card>
+          <PartsUsed
+            workOrderId={id}
+            equipmentType={w.equipment?.equipment_type ?? null}
+            usages={w.workorder_parts ?? []}
+            locked={locked}
+          />
         </div>
 
         <div className="space-y-6">

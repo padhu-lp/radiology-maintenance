@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useUserRole } from '@/hooks/use-user-role'
 import {
   LayoutDashboard, PhoneCall, ClipboardList, MonitorSmartphone, Building2,
-  Package, FlaskConical, CalendarClock, Factory, Users, ShieldCheck, Activity,
+  Package, FlaskConical, CalendarClock, Factory, Users, ShieldCheck, Activity, Truck,
 } from 'lucide-react'
 
 type Item = { name: string; href: string; icon: typeof LayoutDashboard; adminOnly?: boolean }
@@ -41,6 +41,7 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
     label: 'Setup',
     items: [
       { name: 'Manufacturers', href: '/manufacturers', icon: Factory },
+      { name: 'Suppliers',     href: '/suppliers',     icon: Truck },
       { name: 'Technicians',   href: '/technicians',   icon: Users },
       { name: 'Activity Log',  href: '/activity',      icon: Activity, adminOnly: true },
       { name: 'Users',         href: '/admin/users',   icon: ShieldCheck, adminOnly: true },

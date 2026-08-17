@@ -169,20 +169,48 @@ export type Equipment = {
   created_by: string | null
 }
 
+export type Supplier = {
+  supplier_id: string
+  supplier_code: string
+  supplier_name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  city: string | null
+  country: string | null
+  gst_number: string | null
+  payment_terms: string | null
+  lead_time_days: number | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type PartsInventory = {
   part_id: string
+  /** Our internal catalogue code, e.g. PART-0001. */
+  part_code: string
+  /** The manufacturer's own identifier, e.g. GA-3T-4401. */
   part_number: string
   part_name: string
   manufacturer_id: string | null
+  supplier_id: string | null
+  /** Machine family this part fits; null for generic items. */
+  equipment_type: EquipmentType | null
   category: string | null
   description: string | null
   unit_cost: number | null
   currency_code: string
+  unit_of_measure: string
   quantity_on_hand: number
   minimum_stock: number | null
   reorder_point: number | null
   storage_location: string | null
   lead_time_days: number | null
+  last_purchase_date: string | null
+  is_consumable: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -321,6 +349,7 @@ export type UserProfile = {
 type ServerManaged =
   | 'created_at' | 'updated_at' | 'assigned_at' | 'used_at' | 'received_at'
   | 'customer_code' | 'manufacturer_code' | 'technician_code' | 'equipment_code'
+  | 'part_code' | 'supplier_code'
   | 'request_number' | 'workorder_number'
   | 'total_cost' | 'line_cost' | 'parts_cost'
 
@@ -336,6 +365,7 @@ export type ManufacturerInsert   = Insert<Manufacturer, 'manufacturer_id'>
 export type TechnicianInsert     = Insert<Technician, 'technician_id'>
 export type EquipmentInsert      = Insert<Equipment, 'equipment_id'>
 export type PartInsert           = Insert<PartsInventory, 'part_id'>
+export type SupplierInsert       = Insert<Supplier, 'supplier_id'>
 export type ScheduleInsert       = Insert<MaintenanceSchedule, 'schedule_id'>
 export type ServiceRequestInsert = Insert<ServiceRequest, 'request_id'>
 export type WorkOrderInsert      = Insert<WorkOrder, 'workorder_id'>
@@ -366,6 +396,7 @@ export type Database = {
       technicians:           { Row: Technician;          Insert: TechnicianInsert;     Update: Partial<TechnicianInsert> } & Rel
       equipment:             { Row: Equipment;           Insert: EquipmentInsert;      Update: Partial<EquipmentInsert> } & Rel
       parts_inventory:       { Row: PartsInventory;      Insert: PartInsert;           Update: Partial<PartInsert> } & Rel
+      suppliers:             { Row: Supplier;            Insert: SupplierInsert;       Update: Partial<SupplierInsert> } & Rel
       maintenance_schedules: { Row: MaintenanceSchedule; Insert: ScheduleInsert;       Update: Partial<ScheduleInsert> } & Rel
       service_requests:      { Row: ServiceRequest;      Insert: ServiceRequestInsert; Update: Partial<ServiceRequestInsert> } & Rel
       work_orders:           { Row: WorkOrder;           Insert: WorkOrderInsert;      Update: Partial<WorkOrderInsert> } & Rel
