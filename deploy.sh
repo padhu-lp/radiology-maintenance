@@ -26,6 +26,13 @@ git pull --ff-only origin main
 echo "==> Installing dependencies (clean, lockfile-exact)..."
 npm ci
 
+# Next generates route type declarations under .next/dev/types. They are not
+# pruned when a route is deleted, so the next typecheck fails looking for pages
+# that no longer exist. Clear the generated types but keep .next/cache, which
+# is what makes rebuilds fast.
+echo "==> Clearing stale route types..."
+rm -rf .next/dev .next/types
+
 echo "==> Building..."
 npm run build
 
