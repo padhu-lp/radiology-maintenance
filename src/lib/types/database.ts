@@ -219,6 +219,9 @@ export type ServiceRequest = {
   status: RequestStatus
   received_at: string
   received_by: string | null
+  /** What we found when assessing the call, and the disposition. */
+  triage_notes: string | null
+  /** How it was closed without a visit. */
   resolution_notes: string | null
   closed_at: string | null
   created_at: string

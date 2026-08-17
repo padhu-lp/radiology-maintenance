@@ -83,6 +83,12 @@ export default async function ServiceRequestDetailPage({
                   ? <p className="whitespace-pre-wrap">{r.problem_details}</p>
                   : null}
               />
+              {r.triage_notes && (
+                <Field
+                  label="Findings & disposition"
+                  value={<p className="whitespace-pre-wrap">{r.triage_notes}</p>}
+                />
+              )}
               {r.resolution_notes && (
                 <Field
                   label="Resolution"
@@ -92,7 +98,12 @@ export default async function ServiceRequestDetailPage({
             </CardContent>
           </Card>
 
-          <RequestActions requestId={id} requestNumber={r.request_number} status={r.status} />
+          <RequestActions
+            requestId={id}
+            requestNumber={r.request_number}
+            status={r.status}
+            triageNotes={r.triage_notes}
+          />
         </div>
 
         <div className="space-y-6">
