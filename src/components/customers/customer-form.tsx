@@ -12,391 +12,177 @@ import { useToast } from '@/components/ui/use-toast'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { X } from 'lucide-react'
+import type { Customer, CustomerInsert } from '@/lib/types/database'
 
-const customerSchema = z.object({
-  customer_code: z.string().min(1, 'Code is required').max(50),
-  customer_name: z.string().min(2, 'Name must be at least 2 characters').max(255),
-  contact_name: z.string().max(255).optional().or(z.literal('')),
-  phone: z.string().max(20).optional().or(z.literal('')),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  address: z.string().optional().or(z.literal('')),
-  city: z.string().max(100).optional().or(z.literal('')),
+const schema = z.object({
+  customer_name:  z.string().min(2, 'Customer name is required').max(255),
+  contact_name:   z.string().max(255).optional().or(z.literal('')),
+  phone:          z.string().max(30).optional().or(z.literal('')),
+  email:          z.string().email('Enter a valid email').optional().or(z.literal('')),
+  address:        z.string().optional().or(z.literal('')),
+  city:           z.string().max(100).optional().or(z.literal('')),
   state_province: z.string().max(100).optional().or(z.literal('')),
-  postal_code: z.string().max(20).optional().or(z.literal('')),
-  country: z.string().max(100).optional().or(z.literal('')),
-  is_active: z.boolean().default(true),
+  postal_code:    z.string().max(20).optional().or(z.literal('')),
+  country:        z.string().max(100).optional().or(z.literal('')),
+  notes:          z.string().optional().or(z.literal('')),
+  is_active:      z.boolean().default(true),
 })
 
-interface LocationInput {
-  id: string
-  facility_code: string
-  department_name: string
+type FormData = z.infer<typeof schema>
+
+/** Empty strings must become NULL, not '' — keeps "no value" unambiguous. */
+function nullBlanks<T extends Record<string, unknown>>(data: T) {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(data)) out[k] = v === '' ? null : v
+  return out
 }
 
-type CustomerFormData = z.infer<typeof customerSchema>
-
-interface CustomerFormProps {
-  initialData?: CustomerFormData & { customer_id?: number }
-  mode?: 'create' | 'edit'
-}
-
-export function CustomerForm({ initialData, mode = 'create' }: CustomerFormProps) {
+export function CustomerForm({ customer }: { customer?: Customer }) {
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [locations, setLocations] = useState<LocationInput[]>([])
-  const [facilityCode, setFacilityCode] = useState('')
-  const [departmentName, setDepartmentName] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerSchema) as any,
-    defaultValues: (initialData || {
-      is_active: true,
-    }) as any
+  const isEdit = Boolean(customer)
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema) as never,
+    defaultValues: {
+      customer_name:  customer?.customer_name  ?? '',
+      contact_name:   customer?.contact_name   ?? '',
+      phone:          customer?.phone          ?? '',
+      email:          customer?.email          ?? '',
+      address:        customer?.address        ?? '',
+      city:           customer?.city           ?? '',
+      state_province: customer?.state_province ?? '',
+      postal_code:    customer?.postal_code    ?? '',
+      country:        customer?.country        ?? 'India',
+      notes:          customer?.notes          ?? '',
+      is_active:      customer?.is_active      ?? true,
+    },
   })
 
-  const addLocation = () => {
-    if (!facilityCode.trim() || !departmentName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter both location code and name',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const newLocation: LocationInput = {
-      id: Date.now().toString(),
-      facility_code: facilityCode,
-      department_name: departmentName,
-    }
-
-    setLocations([...locations, newLocation])
-    setFacilityCode('')
-    setDepartmentName('')
-  }
-
-  const removeLocation = (id: string) => {
-    setLocations(locations.filter(loc => loc.id !== id))
-  }
-
-  const onSubmit = async (data: CustomerFormData) => {
-    setIsSubmitting(true)
-
+  const onSubmit = async (data: FormData) => {
+    setSaving(true)
     try {
-      if (mode === 'edit' && initialData?.customer_id) {
-        const { error: updateError } = await (supabase as any)
+      const payload = nullBlanks(data) as unknown as CustomerInsert
+
+      if (isEdit && customer) {
+        const { error } = await supabase
           .from('customers')
-          .update(data)
-          .eq('customer_id', initialData.customer_id)
+          .update(payload)
+          .eq('customer_id', customer.customer_id)
+        if (error) throw error
 
-        if (updateError) throw updateError
-
-        // Delete old locations for this customer
-        const { error: deleteError } = await (supabase as any)
-          .from('locations')
-          .delete()
-          .eq('customer_id', initialData.customer_id)
-
-        if (deleteError) throw deleteError
-
-        // Create new locations
-        if (locations.length > 0) {
-          const locationsToInsert = locations.map(loc => ({
-            facility_code: loc.facility_code,
-            department_name: loc.department_name,
-            customer_id: initialData.customer_id,
-            is_active: true,
-          }))
-
-          const { error: insertError } = await (supabase as any)
-            .from('locations')
-            .insert(locationsToInsert)
-
-          if (insertError) throw insertError
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Customer updated successfully',
-        })
+        toast({ title: 'Saved', description: `${data.customer_name} updated` })
+        router.push(`/customers/${customer.customer_id}`)
       } else {
-        const { data: createdCustomer, error: insertError } = await (supabase as any)
+        const { data: created, error } = await supabase
           .from('customers')
-          .insert([data])
-          .select('customer_id')
-
-        if (insertError) throw insertError
-        if (!createdCustomer || createdCustomer.length === 0) throw new Error('Failed to get customer ID')
-
-        const customerId = createdCustomer[0].customer_id
-
-        // Create locations for the new customer
-        if (locations.length > 0) {
-          const locationsToInsert = locations.map(loc => ({
-            facility_code: loc.facility_code,
-            department_name: loc.department_name,
-            customer_id: customerId,
-            is_active: true,
-          }))
-
-          const { error: locError } = await (supabase as any)
-            .from('locations')
-            .insert(locationsToInsert)
-
-          if (locError) throw locError
-        }
+          .insert(payload)
+          .select('customer_id, customer_code')
+          .single()
+        if (error) throw error
+        if (!created) throw new Error('Customer was created but could not be read back')
 
         toast({
-          title: 'Success',
-          description: 'Customer created successfully',
+          title: 'Customer created',
+          description: `Assigned code ${created.customer_code}`,
         })
+        router.push(`/customers/${created.customer_id}`)
       }
-
-      router.push('/customers')
       router.refresh()
-    } catch (error) {
-      console.error('Error:', error)
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string }
+      // 42501 = insufficient_privilege, raised by RLS for non-admins.
+      const denied = e?.code === '42501' || e?.message?.includes('row-level security')
       toast({
-        title: 'Error',
-        description: mode === 'edit' ? 'Failed to update customer' : 'Failed to create customer',
+        title: denied ? 'Permission denied' : 'Could not save',
+        description: denied
+          ? 'Only administrators can add or change customers.'
+          : e?.message ?? 'Unexpected error',
         variant: 'destructive',
       })
     } finally {
-      setIsSubmitting(false)
+      setSaving(false)
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{mode === 'edit' ? 'Edit Customer' : 'Create New Customer'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Code and Name */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="customer_code">Code *</Label>
-              <Input
-                {...register('customer_code')}
-                placeholder="e.g., CUST001"
-              />
-              {errors.customer_code && (
-                <p className="text-sm text-red-500">{errors.customer_code.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customer_name">Customer Name *</Label>
-              <Input
-                {...register('customer_name')}
-                placeholder="e.g., City Hospital"
-              />
-              {errors.customer_name && (
-                <p className="text-sm text-red-500">{errors.customer_name.message}</p>
-              )}
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Customer details</CardTitle></CardHeader>
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="customer_name">Customer name *</Label>
+            <Input id="customer_name" {...register('customer_name')} placeholder="e.g. Apollo Diagnostics" />
+            {errors.customer_name && <p className="text-sm text-red-600">{errors.customer_name.message}</p>}
           </div>
 
-          {/* Contact Info */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="contact_name">Contact Name</Label>
-              <Input
-                {...register('contact_name')}
-                placeholder="Primary contact person"
-              />
-              {errors.contact_name && (
-                <p className="text-sm text-red-500">{errors.contact_name.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                {...register('phone')}
-                placeholder="+1 (555) 000-0000"
-                type="tel"
-              />
-              {errors.phone && (
-                <p className="text-sm text-red-500">{errors.phone.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Email and City */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                {...register('email')}
-                placeholder="contact@customer.com"
-                type="email"
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                {...register('city')}
-                placeholder="City name"
-              />
-              {errors.city && (
-                <p className="text-sm text-red-500">{errors.city.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* State and Postal Code */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="state_province">State/Province</Label>
-              <Input
-                {...register('state_province')}
-                placeholder="State or province"
-              />
-              {errors.state_province && (
-                <p className="text-sm text-red-500">{errors.state_province.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="postal_code">Postal Code</Label>
-              <Input
-                {...register('postal_code')}
-                placeholder="Postal code"
-              />
-              {errors.postal_code && (
-                <p className="text-sm text-red-500">{errors.postal_code.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Address and Country */}
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              {...register('address')}
-              placeholder="Street address"
-              rows={3}
-            />
-            {errors.address && (
-              <p className="text-sm text-red-500">{errors.address.message}</p>
-            )}
+            <Label htmlFor="contact_name">Contact person</Label>
+            <Input id="contact_name" {...register('contact_name')} />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" {...register('phone')} placeholder="+91 ..." />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...register('email')} />
+            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Address</CardTitle></CardHeader>
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="address">Street address</Label>
+            <Textarea id="address" rows={2} {...register('address')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input id="city" {...register('city')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state_province">State</Label>
+            <Input id="state_province" {...register('state_province')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="postal_code">Postal code</Label>
+            <Input id="postal_code" {...register('postal_code')} />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="country">Country</Label>
-            <Input
-              {...register('country')}
-              placeholder="Country name"
-            />
-            {errors.country && (
-              <p className="text-sm text-red-500">{errors.country.message}</p>
-            )}
+            <Input id="country" {...register('country')} />
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Active Status */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              {...register('is_active')}
-              id="is_active"
-              className="h-4 w-4"
-            />
-            <Label htmlFor="is_active" className="mb-0">Active</Label>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Other</CardTitle></CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea id="notes" rows={3} {...register('notes')} />
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-4 w-4 rounded border-slate-300" {...register('is_active')} />
+            Active customer
+          </label>
+        </CardContent>
+      </Card>
 
-          {/* Locations */}
-          <div className="space-y-4">
-            <div className="border rounded-lg p-4">
-              <Label className="text-base font-semibold mb-4 block">Add Locations for this Customer</Label>
-
-              <div className="space-y-3 mb-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="facility_code">Location Code</Label>
-                    <Input
-                      id="facility_code"
-                      placeholder="e.g., LAB-01, DEPT-A"
-                      value={facilityCode}
-                      onChange={(e) => setFacilityCode(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="department_name">Location Name</Label>
-                    <Input
-                      id="department_name"
-                      placeholder="e.g., 2nd Floor Lab, Emergency Dept"
-                      value={departmentName}
-                      onChange={(e) => setDepartmentName(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addLocation}
-                  className="w-full"
-                >
-                  + Add Location
-                </Button>
-              </div>
-
-              {/* Display added locations */}
-              {locations.length > 0 && (
-                <div className="space-y-2 border-t pt-4">
-                  <Label className="text-sm font-medium">Added Locations:</Label>
-                  {locations.map((location) => (
-                    <div
-                      key={location.id}
-                      className="flex items-center justify-between bg-gray-50 p-3 rounded"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{location.facility_code}</p>
-                        <p className="text-sm text-gray-600">{location.department_name}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeLocation(location.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end gap-4 pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/customers')}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Creating...') : (mode === 'edit' ? 'Update Customer' : 'Create Customer')}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+        <Button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create customer'}
+        </Button>
+      </div>
+    </form>
   )
 }

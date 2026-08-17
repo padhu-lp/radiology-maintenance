@@ -1,821 +1,364 @@
-// Auto-generated from the live Supabase schema (project: Radiology / bmfpmawingyslabxsdia).
-// Regenerate with: npx supabase gen types typescript --project-id bmfpmawingyslabxsdia > src/lib/types/database.ts
+/**
+ * Types for the rebuilt schema (migration 007).
+ *
+ * Hand-maintained rather than raw `supabase gen types` output for one reason:
+ * the value sets live in CHECK constraints, which the generator emits as plain
+ * `string`. Declaring them here as const arrays gives us a single source of
+ * truth that both the dropdowns and the type checker use, so a form option can
+ * never drift from what the database will accept.
+ *
+ * If you change a CHECK constraint in a migration, change the matching array
+ * below in the same commit.
+ */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [k: string]: Json | undefined } | Json[]
+
+/* ------------------------------------------------------------------ */
+/* Value sets — mirror the CHECK constraints in migrations/007         */
+/* ------------------------------------------------------------------ */
+
+export const EQUIPMENT_TYPES = [
+  'X-Ray', 'CT', 'MRI', 'Ultrasound', 'Mammography',
+  'Fluoroscopy', 'PET', 'SPECT', 'DR/CR', 'C-Arm', 'Other',
+] as const
+export type EquipmentType = (typeof EQUIPMENT_TYPES)[number]
+
+export const EQUIPMENT_STATUSES = ['Active', 'Under Maintenance', 'Out of Service', 'Retired'] as const
+export type EquipmentStatus = (typeof EQUIPMENT_STATUSES)[number]
+
+export const RISK_LEVELS = ['Critical', 'High', 'Medium', 'Low'] as const
+export type RiskLevel = (typeof RISK_LEVELS)[number]
+
+export const REQUEST_CHANNELS = ['Phone', 'Email', 'WhatsApp', 'Walk-in', 'Other'] as const
+export type RequestChannel = (typeof REQUEST_CHANNELS)[number]
+
+export const URGENCIES = ['Emergency', 'High', 'Medium', 'Low'] as const
+export type Urgency = (typeof URGENCIES)[number]
+
+export const REQUEST_STATUSES = ['New', 'Triaged', 'Converted', 'Resolved', 'Cancelled'] as const
+export type RequestStatus = (typeof REQUEST_STATUSES)[number]
+
+export const WORKORDER_TYPES = [
+  'Preventive', 'Corrective', 'Emergency', 'Calibration', 'Installation', 'Inspection',
+] as const
+export type WorkOrderType = (typeof WORKORDER_TYPES)[number]
+
+export const PRIORITIES = ['Emergency', 'High', 'Medium', 'Low'] as const
+export type Priority = (typeof PRIORITIES)[number]
+
+export const WORKORDER_STATUSES = ['Open', 'In Progress', 'On Hold', 'Completed', 'Cancelled'] as const
+export type WorkOrderStatus = (typeof WORKORDER_STATUSES)[number]
+
+export const ASSIGNMENT_ROLES = ['Lead', 'Assistant'] as const
+export type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
+
+export const FREQUENCIES = [
+  'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'As Needed',
+] as const
+export type Frequency = (typeof FREQUENCIES)[number]
+
+export const PASS_FAIL_STATUSES = ['Pass', 'Fail', 'Conditional'] as const
+export type PassFailStatus = (typeof PASS_FAIL_STATUSES)[number]
+
+export const APP_ROLES = ['admin', 'technician', 'viewer'] as const
+export type AppRole = (typeof APP_ROLES)[number]
+
+/* ------------------------------------------------------------------ */
+/* Row shapes                                                          */
+/* ------------------------------------------------------------------ */
+
+// NOTE: these are `type` aliases, not `interface`, on purpose. postgrest-js
+// constrains table shapes to Record<string, unknown>; TypeScript grants an
+// implicit index signature to type aliases but never to interfaces, so using
+// `interface` here makes every Row/Insert resolve to `never`.
+export type Customer = {
+  customer_id: string
+  customer_code: string
+  customer_name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  city: string | null
+  state_province: string | null
+  postal_code: string | null
+  country: string | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export type Location = {
+  location_id: string
+  customer_id: string
+  facility_name: string | null
+  department_name: string
+  building: string | null
+  floor_level: string | null
+  room_number: string | null
+  description: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type Manufacturer = {
+  manufacturer_id: string
+  manufacturer_code: string
+  manufacturer_name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  website: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type Technician = {
+  technician_id: string
+  technician_code: string
+  user_id: string | null
+  first_name: string
+  last_name: string
+  email: string | null
+  phone: string | null
+  specialization: string | null
+  certification: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type Equipment = {
+  equipment_id: string
+  equipment_code: string
+  customer_id: string
+  location_id: string | null
+  manufacturer_id: string | null
+  equipment_name: string
+  equipment_type: EquipmentType
+  model_number: string | null
+  serial_number: string | null
+  installation_date: string | null
+  purchase_date: string | null
+  purchase_price: number | null
+  warranty_expiry: string | null
+  risk_level: RiskLevel | null
+  status: EquipmentStatus
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export type PartsInventory = {
+  part_id: string
+  part_number: string
+  part_name: string
+  manufacturer_id: string | null
+  category: string | null
+  description: string | null
+  unit_cost: number | null
+  currency_code: string
+  quantity_on_hand: number
+  minimum_stock: number | null
+  reorder_point: number | null
+  storage_location: string | null
+  lead_time_days: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type MaintenanceSchedule = {
+  schedule_id: string
+  equipment_id: string
+  maintenance_type: string
+  frequency: Frequency
+  frequency_interval: number | null
+  last_performed: string | null
+  next_due: string
+  estimated_hours: number | null
+  required_parts: string | null
+  procedure_details: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export type ServiceRequest = {
+  request_id: string
+  request_number: string
+  customer_id: string
+  equipment_id: string | null
+  channel: RequestChannel
+  reported_by_name: string | null
+  reported_by_phone: string | null
+  problem_summary: string
+  problem_details: string | null
+  urgency: Urgency
+  status: RequestStatus
+  received_at: string
+  received_by: string | null
+  resolution_notes: string | null
+  closed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type WorkOrder = {
+  workorder_id: string
+  workorder_number: string
+  service_request_id: string | null
+  equipment_id: string
+  schedule_id: string | null
+  workorder_type: WorkOrderType
+  priority: Priority
+  status: WorkOrderStatus
+  problem_description: string | null
+  fault_code: string | null
+  scheduled_date: string | null
+  start_date: string | null
+  completion_date: string | null
+  downtime_hours: number | null
+  work_description: string | null
+  resolution: string | null
+  service_provider: string | null
+  labor_cost: number
+  /** Maintained by trigger from workorder_parts — never write directly. */
+  parts_cost: number
+  /** Generated column: labor_cost + parts_cost. Read-only. */
+  total_cost: number | null
+  currency_code: string
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export type WorkOrderTechnician = {
+  assignment_id: string
+  workorder_id: string
+  technician_id: string
+  role: AssignmentRole
+  hours_worked: number | null
+  notes: string | null
+  assigned_at: string
+}
+
+export type WorkOrderPart = {
+  usage_id: string
+  workorder_id: string
+  part_id: string
+  quantity: number
+  /** Defaulted from the catalogue by trigger when omitted on insert. */
+  unit_cost: number | null
+  /** Generated column: quantity * unit_cost. Read-only. */
+  line_cost: number | null
+  notes: string | null
+  used_at: string
+  created_by: string | null
+}
+
+export type QcTest = {
+  qc_test_id: string
+  equipment_id: string
+  workorder_id: string | null
+  test_type: string
+  test_date: string
+  technician_id: string | null
+  test_protocol: string | null
+  phantom_used: string | null
+  measured_values: Json | null
+  acceptance_criteria: string | null
+  pass_fail_status: PassFailStatus
+  deviations: string | null
+  corrective_actions: string | null
+  next_test_due: string | null
+  approved: boolean
+  approved_by: string | null
+  approved_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type UserProfile = {
+  user_id: string
+  must_change_password: boolean | null
+  password_changed_at: string | null
+  created_at: string | null
+  updated_at: string | null
+  role: AppRole
+  full_name: string | null
+}
+
+/* ------------------------------------------------------------------ */
+/* Insert / Update helpers                                             */
+/* ------------------------------------------------------------------ */
+
+/** Columns the database fills in: PKs, codes, timestamps, generated values. */
+type ServerManaged =
+  | 'created_at' | 'updated_at' | 'assigned_at' | 'used_at' | 'received_at'
+  | 'customer_code' | 'manufacturer_code' | 'technician_code' | 'equipment_code'
+  | 'request_number' | 'workorder_number'
+  | 'total_cost' | 'line_cost' | 'parts_cost'
+
+export type Insert<T, PK extends keyof T> = Omit<T, PK | Extract<keyof T, ServerManaged>> &
+  Partial<Pick<T, Extract<keyof T, ServerManaged>>>
+
+export type Update<T, PK extends keyof T> = Partial<Omit<T, PK | Extract<keyof T, ServerManaged>>>
+
+export type CustomerInsert       = Insert<Customer, 'customer_id'>
+export type LocationInsert       = Insert<Location, 'location_id'>
+export type ManufacturerInsert   = Insert<Manufacturer, 'manufacturer_id'>
+export type TechnicianInsert     = Insert<Technician, 'technician_id'>
+export type EquipmentInsert      = Insert<Equipment, 'equipment_id'>
+export type PartInsert           = Insert<PartsInventory, 'part_id'>
+export type ScheduleInsert       = Insert<MaintenanceSchedule, 'schedule_id'>
+export type ServiceRequestInsert = Insert<ServiceRequest, 'request_id'>
+export type WorkOrderInsert      = Insert<WorkOrder, 'workorder_id'>
+export type AssignmentInsert     = Insert<WorkOrderTechnician, 'assignment_id'>
+export type PartUsageInsert      = Insert<WorkOrderPart, 'usage_id'>
+export type QcTestInsert         = Insert<QcTest, 'qc_test_id'>
+
+/* ------------------------------------------------------------------ */
+/* Supabase client typing                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * NOTE: every table must carry a `Relationships` key. supabase-js checks the
+ * schema against its GenericTable constraint, and a table missing that key
+ * fails the check — at which point insert/update argument types silently
+ * collapse to `never` and every query result is treated as possibly null.
+ * Empty tuple is fine; we don't rely on typed embedded joins.
+ */
+type Rel = { Relationships: [] }
 
 export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
+  __InternalSupabase: { PostgrestVersion: '13.0.5' }
   public: {
     Tables: {
-      customers: {
-        Row: {
-          address: string | null
-          city: string | null
-          contact_name: string | null
-          country: string | null
-          created_date: string | null
-          customer_code: string | null
-          customer_id: number
-          customer_name: string
-          email: string | null
-          is_active: boolean | null
-          phone: string | null
-          postal_code: string | null
-          state_province: string | null
-        }
-        Insert: {
-          address?: string | null
-          city?: string | null
-          contact_name?: string | null
-          country?: string | null
-          created_date?: string | null
-          customer_code?: string | null
-          customer_id?: number
-          customer_name: string
-          email?: string | null
-          is_active?: boolean | null
-          phone?: string | null
-          postal_code?: string | null
-          state_province?: string | null
-        }
-        Update: {
-          address?: string | null
-          city?: string | null
-          contact_name?: string | null
-          country?: string | null
-          created_date?: string | null
-          customer_code?: string | null
-          customer_id?: number
-          customer_name?: string
-          email?: string | null
-          is_active?: boolean | null
-          phone?: string | null
-          postal_code?: string | null
-          state_province?: string | null
-        }
-        Relationships: []
-      }
-      inventory: {
-        Row: {
-          created_by: string | null
-          created_date: string | null
-          department_id: number | null
-          equipment_id: string
-          equipment_name: string
-          equipment_type: string
-          installation_date: string | null
-          inventory_number: string
-          last_modified: string | null
-          location_id: number | null
-          manufacturer_id: number | null
-          model_number: string | null
-          modified_by: string | null
-          purchase_date: string | null
-          purchase_price: number | null
-          risk_level: string | null
-          serial_number: string | null
-          status: string
-          warranty_expiry: string | null
-        }
-        Insert: {
-          created_by?: string | null
-          created_date?: string | null
-          department_id?: number | null
-          equipment_id?: string
-          equipment_name: string
-          equipment_type: string
-          installation_date?: string | null
-          inventory_number: string
-          last_modified?: string | null
-          location_id?: number | null
-          manufacturer_id?: number | null
-          model_number?: string | null
-          modified_by?: string | null
-          purchase_date?: string | null
-          purchase_price?: number | null
-          risk_level?: string | null
-          serial_number?: string | null
-          status?: string
-          warranty_expiry?: string | null
-        }
-        Update: {
-          created_by?: string | null
-          created_date?: string | null
-          department_id?: number | null
-          equipment_id?: string
-          equipment_name?: string
-          equipment_type?: string
-          installation_date?: string | null
-          inventory_number?: string
-          last_modified?: string | null
-          location_id?: number | null
-          manufacturer_id?: number | null
-          model_number?: string | null
-          modified_by?: string | null
-          purchase_date?: string | null
-          purchase_price?: number | null
-          risk_level?: string | null
-          serial_number?: string | null
-          status?: string
-          warranty_expiry?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["location_id"]
-          },
-          {
-            foreignKeyName: "inventory_manufacturer_id_fkey"
-            columns: ["manufacturer_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturers"
-            referencedColumns: ["manufacturer_id"]
-          },
-        ]
-      }
-      locations: {
-        Row: {
-          building_code: string | null
-          created_date: string | null
-          customer_id: number | null
-          department_name: string
-          description: string | null
-          facility_code: string | null
-          facility_name: string | null
-          floor_level: string | null
-          is_active: boolean | null
-          location_id: number
-          room_number: string | null
-        }
-        Insert: {
-          building_code?: string | null
-          created_date?: string | null
-          customer_id?: number | null
-          department_name: string
-          description?: string | null
-          facility_code?: string | null
-          facility_name?: string | null
-          floor_level?: string | null
-          is_active?: boolean | null
-          location_id?: number
-          room_number?: string | null
-        }
-        Update: {
-          building_code?: string | null
-          created_date?: string | null
-          customer_id?: number | null
-          department_name?: string
-          description?: string | null
-          facility_code?: string | null
-          facility_name?: string | null
-          floor_level?: string | null
-          is_active?: boolean | null
-          location_id?: number
-          room_number?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "locations_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["customer_id"]
-          },
-        ]
-      }
-      manufacturers: {
-        Row: {
-          address: string | null
-          contact_name: string | null
-          created_date: string | null
-          email: string | null
-          is_active: boolean | null
-          manufacturer_code: string | null
-          manufacturer_id: number
-          manufacturer_name: string
-          phone: string | null
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          contact_name?: string | null
-          created_date?: string | null
-          email?: string | null
-          is_active?: boolean | null
-          manufacturer_code?: string | null
-          manufacturer_id?: number
-          manufacturer_name: string
-          phone?: string | null
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          contact_name?: string | null
-          created_date?: string | null
-          email?: string | null
-          is_active?: boolean | null
-          manufacturer_code?: string | null
-          manufacturer_id?: number
-          manufacturer_name?: string
-          phone?: string | null
-          website?: string | null
-        }
-        Relationships: []
-      }
-      parts_inventory: {
-        Row: {
-          bl_warranty_end_date: string | null
-          bl_warranty_start_date: string | null
-          category: string | null
-          country: string | null
-          created_date: string | null
-          current_stock: number
-          customer_warranty_end_date: string | null
-          customer_warranty_start_date: string | null
-          date_of_delivery: string | null
-          debitor: string | null
-          division: string | null
-          end_of_delivery_date: string | null
-          end_of_support_date: string | null
-          eq_status: string | null
-          eq_substatus: string | null
-          equipment_id: string | null
-          expiry_date: string | null
-          hc_submission_no: string | null
-          hq_purchase_order: string | null
-          hq_sales_order: string | null
-          install_date: string | null
-          is_active: boolean | null
-          last_country_activity: string | null
-          last_order_date: string | null
-          lead_time_days: number | null
-          license_type: string | null
-          location_city: string | null
-          location_code: string | null
-          location_name: string | null
-          location_short_form: string | null
-          location_street: string | null
-          location_zip_code: string | null
-          manufacturer_id: number | null
-          maximum_stock: number | null
-          minimum_stock: number | null
-          part_id: string
-          part_name: string
-          part_number: string
-          reorder_point: number | null
-          serial_number: string | null
-          service_partner: string | null
-          service_partner_name: string | null
-          software_version: string | null
-          storage_location: string | null
-          unit_cost: number | null
-        }
-        Insert: {
-          bl_warranty_end_date?: string | null
-          bl_warranty_start_date?: string | null
-          category?: string | null
-          country?: string | null
-          created_date?: string | null
-          current_stock?: number
-          customer_warranty_end_date?: string | null
-          customer_warranty_start_date?: string | null
-          date_of_delivery?: string | null
-          debitor?: string | null
-          division?: string | null
-          end_of_delivery_date?: string | null
-          end_of_support_date?: string | null
-          eq_status?: string | null
-          eq_substatus?: string | null
-          equipment_id?: string | null
-          expiry_date?: string | null
-          hc_submission_no?: string | null
-          hq_purchase_order?: string | null
-          hq_sales_order?: string | null
-          install_date?: string | null
-          is_active?: boolean | null
-          last_country_activity?: string | null
-          last_order_date?: string | null
-          lead_time_days?: number | null
-          license_type?: string | null
-          location_city?: string | null
-          location_code?: string | null
-          location_name?: string | null
-          location_short_form?: string | null
-          location_street?: string | null
-          location_zip_code?: string | null
-          manufacturer_id?: number | null
-          maximum_stock?: number | null
-          minimum_stock?: number | null
-          part_id?: string
-          part_name: string
-          part_number: string
-          reorder_point?: number | null
-          serial_number?: string | null
-          service_partner?: string | null
-          service_partner_name?: string | null
-          software_version?: string | null
-          storage_location?: string | null
-          unit_cost?: number | null
-        }
-        Update: {
-          bl_warranty_end_date?: string | null
-          bl_warranty_start_date?: string | null
-          category?: string | null
-          country?: string | null
-          created_date?: string | null
-          current_stock?: number
-          customer_warranty_end_date?: string | null
-          customer_warranty_start_date?: string | null
-          date_of_delivery?: string | null
-          debitor?: string | null
-          division?: string | null
-          end_of_delivery_date?: string | null
-          end_of_support_date?: string | null
-          eq_status?: string | null
-          eq_substatus?: string | null
-          equipment_id?: string | null
-          expiry_date?: string | null
-          hc_submission_no?: string | null
-          hq_purchase_order?: string | null
-          hq_sales_order?: string | null
-          install_date?: string | null
-          is_active?: boolean | null
-          last_country_activity?: string | null
-          last_order_date?: string | null
-          lead_time_days?: number | null
-          license_type?: string | null
-          location_city?: string | null
-          location_code?: string | null
-          location_name?: string | null
-          location_short_form?: string | null
-          location_street?: string | null
-          location_zip_code?: string | null
-          manufacturer_id?: number | null
-          maximum_stock?: number | null
-          minimum_stock?: number | null
-          part_id?: string
-          part_name?: string
-          part_number?: string
-          reorder_point?: number | null
-          serial_number?: string | null
-          service_partner?: string | null
-          service_partner_name?: string | null
-          software_version?: string | null
-          storage_location?: string | null
-          unit_cost?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_parts_inventory_equipment"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "inventory"
-            referencedColumns: ["equipment_id"]
-          },
-          {
-            foreignKeyName: "parts_inventory_manufacturer_id_fkey"
-            columns: ["manufacturer_id"]
-            isOneToOne: false
-            referencedRelation: "manufacturers"
-            referencedColumns: ["manufacturer_id"]
-          },
-        ]
-      }
-      qc_tests: {
-        Row: {
-          acceptance_criteria: string | null
-          approved: boolean | null
-          approved_by: string | null
-          approved_date: string | null
-          corrective_actions: string | null
-          created_date: string | null
-          deviations: string | null
-          equipment_id: string
-          image_attachments: string[] | null
-          measured_values: Json | null
-          next_test_due: string | null
-          pass_fail_status: string
-          phantom_used: string | null
-          qc_test_id: string
-          technician_id: string | null
-          test_date: string
-          test_protocol: string | null
-          test_results: Json | null
-          test_type: string
-        }
-        Insert: {
-          acceptance_criteria?: string | null
-          approved?: boolean | null
-          approved_by?: string | null
-          approved_date?: string | null
-          corrective_actions?: string | null
-          created_date?: string | null
-          deviations?: string | null
-          equipment_id: string
-          image_attachments?: string[] | null
-          measured_values?: Json | null
-          next_test_due?: string | null
-          pass_fail_status: string
-          phantom_used?: string | null
-          qc_test_id?: string
-          technician_id?: string | null
-          test_date: string
-          test_protocol?: string | null
-          test_results?: Json | null
-          test_type: string
-        }
-        Update: {
-          acceptance_criteria?: string | null
-          approved?: boolean | null
-          approved_by?: string | null
-          approved_date?: string | null
-          corrective_actions?: string | null
-          created_date?: string | null
-          deviations?: string | null
-          equipment_id?: string
-          image_attachments?: string[] | null
-          measured_values?: Json | null
-          next_test_due?: string | null
-          pass_fail_status?: string
-          phantom_used?: string | null
-          qc_test_id?: string
-          technician_id?: string | null
-          test_date?: string
-          test_protocol?: string | null
-          test_results?: Json | null
-          test_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "qc_tests_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "inventory"
-            referencedColumns: ["equipment_id"]
-          },
-        ]
-      }
-      schedules: {
-        Row: {
-          created_by: string | null
-          created_date: string | null
-          equipment_id: string
-          estimated_hours: number | null
-          frequency: string
-          frequency_interval: number | null
-          is_active: boolean | null
-          last_performed: string | null
-          maintenance_type: string
-          next_due: string
-          procedure_details: string | null
-          required_parts: string | null
-          schedule_id: string
-        }
-        Insert: {
-          created_by?: string | null
-          created_date?: string | null
-          equipment_id: string
-          estimated_hours?: number | null
-          frequency: string
-          frequency_interval?: number | null
-          is_active?: boolean | null
-          last_performed?: string | null
-          maintenance_type: string
-          next_due: string
-          procedure_details?: string | null
-          required_parts?: string | null
-          schedule_id?: string
-        }
-        Update: {
-          created_by?: string | null
-          created_date?: string | null
-          equipment_id?: string
-          estimated_hours?: number | null
-          frequency?: string
-          frequency_interval?: number | null
-          is_active?: boolean | null
-          last_performed?: string | null
-          maintenance_type?: string
-          next_due?: string
-          procedure_details?: string | null
-          required_parts?: string | null
-          schedule_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "schedules_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "inventory"
-            referencedColumns: ["equipment_id"]
-          },
-        ]
-      }
-      technicians: {
-        Row: {
-          certification: string | null
-          created_date: string | null
-          email: string | null
-          first_name: string
-          is_active: boolean | null
-          last_name: string
-          phone: string | null
-          specialization: string | null
-          technician_code: string
-          technician_id: string
-        }
-        Insert: {
-          certification?: string | null
-          created_date?: string | null
-          email?: string | null
-          first_name: string
-          is_active?: boolean | null
-          last_name: string
-          phone?: string | null
-          specialization?: string | null
-          technician_code: string
-          technician_id?: string
-        }
-        Update: {
-          certification?: string | null
-          created_date?: string | null
-          email?: string | null
-          first_name?: string
-          is_active?: boolean | null
-          last_name?: string
-          phone?: string | null
-          specialization?: string | null
-          technician_code?: string
-          technician_id?: string
-        }
-        Relationships: []
-      }
-      user_profiles: {
-        Row: {
-          created_at: string | null
-          must_change_password: boolean | null
-          password_changed_at: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          must_change_password?: boolean | null
-          password_changed_at?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          must_change_password?: boolean | null
-          password_changed_at?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      work_orders: {
-        Row: {
-          assigned_technician: string | null
-          completion_date: string | null
-          created_by: string | null
-          created_date: string | null
-          downtime_hours: number | null
-          equipment_id: string
-          fault_code: string | null
-          labor_cost: number | null
-          labor_hours: number | null
-          last_modified: string | null
-          modified_by: string | null
-          parts_cost: number | null
-          priority: string
-          problem_description: string | null
-          request_date: string
-          requested_by: string | null
-          resolution: string | null
-          scheduled_date: string | null
-          service_provider: string | null
-          start_date: string | null
-          status: string
-          total_cost: number | null
-          work_description: string | null
-          workorder_id: string
-          workorder_number: string
-          workorder_type: string
-        }
-        Insert: {
-          assigned_technician?: string | null
-          completion_date?: string | null
-          created_by?: string | null
-          created_date?: string | null
-          downtime_hours?: number | null
-          equipment_id: string
-          fault_code?: string | null
-          labor_cost?: number | null
-          labor_hours?: number | null
-          last_modified?: string | null
-          modified_by?: string | null
-          parts_cost?: number | null
-          priority: string
-          problem_description?: string | null
-          request_date: string
-          requested_by?: string | null
-          resolution?: string | null
-          scheduled_date?: string | null
-          service_provider?: string | null
-          start_date?: string | null
-          status?: string
-          total_cost?: number | null
-          work_description?: string | null
-          workorder_id?: string
-          workorder_number: string
-          workorder_type: string
-        }
-        Update: {
-          assigned_technician?: string | null
-          completion_date?: string | null
-          created_by?: string | null
-          created_date?: string | null
-          downtime_hours?: number | null
-          equipment_id?: string
-          fault_code?: string | null
-          labor_cost?: number | null
-          labor_hours?: number | null
-          last_modified?: string | null
-          modified_by?: string | null
-          parts_cost?: number | null
-          priority?: string
-          problem_description?: string | null
-          request_date?: string
-          requested_by?: string | null
-          resolution?: string | null
-          scheduled_date?: string | null
-          service_provider?: string | null
-          start_date?: string | null
-          status?: string
-          total_cost?: number | null
-          work_description?: string | null
-          workorder_id?: string
-          workorder_number?: string
-          workorder_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "work_orders_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "inventory"
-            referencedColumns: ["equipment_id"]
-          },
-        ]
-      }
+      customers:             { Row: Customer;            Insert: CustomerInsert;       Update: Partial<CustomerInsert> } & Rel
+      locations:             { Row: Location;            Insert: LocationInsert;       Update: Partial<LocationInsert> } & Rel
+      manufacturers:         { Row: Manufacturer;        Insert: ManufacturerInsert;   Update: Partial<ManufacturerInsert> } & Rel
+      technicians:           { Row: Technician;          Insert: TechnicianInsert;     Update: Partial<TechnicianInsert> } & Rel
+      equipment:             { Row: Equipment;           Insert: EquipmentInsert;      Update: Partial<EquipmentInsert> } & Rel
+      parts_inventory:       { Row: PartsInventory;      Insert: PartInsert;           Update: Partial<PartInsert> } & Rel
+      maintenance_schedules: { Row: MaintenanceSchedule; Insert: ScheduleInsert;       Update: Partial<ScheduleInsert> } & Rel
+      service_requests:      { Row: ServiceRequest;      Insert: ServiceRequestInsert; Update: Partial<ServiceRequestInsert> } & Rel
+      work_orders:           { Row: WorkOrder;           Insert: WorkOrderInsert;      Update: Partial<WorkOrderInsert> } & Rel
+      workorder_technicians: { Row: WorkOrderTechnician; Insert: AssignmentInsert;     Update: Partial<AssignmentInsert> } & Rel
+      workorder_parts:       { Row: WorkOrderPart;       Insert: PartUsageInsert;      Update: Partial<PartUsageInsert> } & Rel
+      qc_tests:              { Row: QcTest;              Insert: QcTestInsert;         Update: Partial<QcTestInsert> } & Rel
+      user_profiles:         { Row: UserProfile;         Insert: Partial<UserProfile>; Update: Partial<UserProfile> } & Rel
     }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    Views: { [_ in never]: never }
+    Functions: { [_ in never]: never }
+    Enums: { [_ in never]: never }
+    CompositeTypes: { [_ in never]: never }
   }
 }
-
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

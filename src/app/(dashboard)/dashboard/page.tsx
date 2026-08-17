@@ -1,117 +1,62 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 import { createServerClient } from '@/lib/supabase/server'
-import { cn } from '@/lib/utils'
-import { Activity, AlertCircle, CheckCircle, Clock, Wrench } from 'lucide-react'
-import { EquipmentChart } from '@/components/dashboard/equipment-chart'
-import { WorkOrderTable } from '@/components/dashboard/work-order-table'
-import { MaintenanceCalendar } from '@/components/dashboard/maintenance-calendar'
+import { PageHeader } from '@/components/layout/page-header'
+import { Card, CardContent } from '@/components/ui/card'
+
+export const dynamic = 'force-dynamic'
+
+async function countOf(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  table: 'customers' | 'equipment' | 'service_requests' | 'work_orders',
+  filter?: (q: never) => never
+) {
+  let q = supabase.from(table).select('*', { count: 'exact', head: true })
+  if (filter) q = filter(q as never)
+  const { count } = await q
+  return count ?? 0
+}
+
+function Stat({ label, value, href }: { label: string; value: number; href: string }) {
+  return (
+    <Link href={href}>
+      <Card className="transition-colors hover:border-slate-300">
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-3xl font-semibold tabular-nums mt-1">{value}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
 
 export default async function DashboardPage() {
-    const supabase = await createServerClient()
+  const supabase = await createServerClient()
 
-    // Fetch dashboard statistics
-    const [
-        { count: totalEquipment },
-        { count: activeWorkOrders },
-        { count: overdueMaintenances },
-        { data: recentWorkOrders }
-    ] = await Promise.all([
-        supabase.from('inventory').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
-        supabase.from('work_orders').select('*', { count: 'exact', head: true }).in('status', ['Open', 'In Progress']),
-        supabase.from('schedules').select('*', { count: 'exact', head: true }).lte('next_due', new Date().toISOString()),
-        supabase.from('work_orders').select('*, inventory(equipment_name)').order('request_date', { ascending: false }).limit(5)
-    ])
+  const [customers, equipment, openRequests, openWorkOrders] = await Promise.all([
+    countOf(supabase, 'customers'),
+    countOf(supabase, 'equipment'),
+    supabase.from('service_requests').select('*', { count: 'exact', head: true })
+      .in('status', ['New', 'Triaged']).then((r) => r.count ?? 0),
+    supabase.from('work_orders').select('*', { count: 'exact', head: true })
+      .in('status', ['Open', 'In Progress', 'On Hold']).then((r) => r.count ?? 0),
+  ])
 
-    const stats = [
-        {
-            title: 'Total Equipment',
-            value: totalEquipment || 0,
-            icon: Activity,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-100',
-        },
-        {
-            title: 'Active Work Orders',
-            value: activeWorkOrders || 0,
-            icon: Wrench,
-            color: 'text-yellow-600',
-            bgColor: 'bg-yellow-100',
-        },
-        {
-            title: 'Overdue Maintenance',
-            value: overdueMaintenances || 0,
-            icon: AlertCircle,
-            color: 'text-red-600',
-            bgColor: 'bg-red-100',
-        },
-        {
-            title: 'Completed Today',
-            value: 12,
-            icon: CheckCircle,
-            color: 'text-green-600',
-            bgColor: 'bg-green-100',
-        },
-    ]
+  return (
+    <>
+      <PageHeader title="Overview" description="Current service position" />
 
-    return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold">Dashboard</h1>
-                <p className="text-gray-600">Welcome to Radiology Equipment Maintenance System</p>
-            </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Open service requests" value={openRequests}   href="/service-requests" />
+        <Stat label="Open work orders"      value={openWorkOrders} href="/work-orders" />
+        <Stat label="Equipment"             value={equipment}      href="/equipment" />
+        <Stat label="Customers"             value={customers}      href="/customers" />
+      </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat) => {
-                    const Icon = stat.icon
-                    return (
-                        <Card key={stat.title}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-gray-600">
-                                    {stat.title}
-                                </CardTitle>
-                                <div className={cn('p-2 rounded-lg', stat.bgColor)}>
-                                    <Icon className={cn('h-5 w-5', stat.color)} />
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stat.value}</div>
-                            </CardContent>
-                        </Card>
-                    )
-                })}
-            </div>
-
-            {/* Charts and Tables */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Equipment Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <EquipmentChart />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Work Orders</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <WorkOrderTable workOrders={recentWorkOrders || []} />
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Maintenance Calendar */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Upcoming Maintenance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <MaintenanceCalendar />
-                </CardContent>
-            </Card>
-        </div>
-    )
+      <Card className="mt-6">
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          Charts and activity feed arrive once service requests and work orders are rebuilt.
+        </CardContent>
+      </Card>
+    </>
+  )
 }
