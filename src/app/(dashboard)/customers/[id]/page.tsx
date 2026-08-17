@@ -8,7 +8,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Pencil } from 'lucide-react'
 import { DASH, date } from '@/lib/format'
-import type { Customer } from '@/lib/types/database'
+import { LocationManager } from '@/components/locations/location-manager'
+import type { Customer, Location } from '@/lib/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export default async function CustomerDetailPage({
   const { data, error } = await supabase
     .from('customers')
     .select(`*,
-      locations(location_id, department_name, facility_name, room_number, is_active),
+      locations(*),
       equipment(equipment_id, equipment_code, equipment_name, equipment_type, status)`)
     .eq('customer_id', id)
     .single()
@@ -40,15 +41,16 @@ export default async function CustomerDetailPage({
   if (error || !data) redirect('/customers')
 
   const c = data as unknown as Customer & {
-    locations: Array<{
-      location_id: string; department_name: string
-      facility_name: string | null; room_number: string | null; is_active: boolean
-    }>
+    locations: Location[]
     equipment: Array<{
       equipment_id: string; equipment_code: string
       equipment_name: string; equipment_type: string; status: string
     }>
   }
+
+  const locations = [...(c.locations ?? [])].sort((a, b) =>
+    a.department_name.localeCompare(b.department_name)
+  )
 
   return (
     <>
@@ -84,39 +86,7 @@ export default async function CustomerDetailPage({
         </Card>
 
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Sites &amp; departments</CardTitle>
-              <span className="text-sm text-muted-foreground">{c.locations?.length ?? 0}</span>
-            </CardHeader>
-            <CardContent className="p-0">
-              {!c.locations?.length ? (
-                <EmptyState
-                  title="No sites recorded"
-                  description="Sites let you place equipment in a specific department or room."
-                />
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Facility</TableHead>
-                      <TableHead>Room</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {c.locations.map((l) => (
-                      <TableRow key={l.location_id}>
-                        <TableCell className="font-medium">{l.department_name}</TableCell>
-                        <TableCell>{l.facility_name ?? DASH}</TableCell>
-                        <TableCell>{l.room_number ?? DASH}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <LocationManager customerId={id} locations={locations} />
 
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">

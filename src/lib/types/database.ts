@@ -63,6 +63,20 @@ export type PassFailStatus = (typeof PASS_FAIL_STATUSES)[number]
 export const APP_ROLES = ['admin', 'technician', 'viewer'] as const
 export type AppRole = (typeof APP_ROLES)[number]
 
+/**
+ * Narrowing guard for values arriving from outside the app — URL parameters,
+ * form payloads, imports. `list.includes(x)` checks at runtime but does not
+ * narrow the type, so the typed Supabase client would still reject the value.
+ *
+ *   if (isOneOf(EQUIPMENT_TYPES, type)) query.eq('equipment_type', type)
+ */
+export function isOneOf<T extends readonly string[]>(
+  list: T,
+  value: unknown
+): value is T[number] {
+  return typeof value === 'string' && (list as readonly string[]).includes(value)
+}
+
 /* ------------------------------------------------------------------ */
 /* Row shapes                                                          */
 /* ------------------------------------------------------------------ */
@@ -313,6 +327,7 @@ export type Insert<T, PK extends keyof T> = Omit<T, PK | Extract<keyof T, Server
 export type Update<T, PK extends keyof T> = Partial<Omit<T, PK | Extract<keyof T, ServerManaged>>>
 
 export type CustomerInsert       = Insert<Customer, 'customer_id'>
+export type EquipmentUpdate      = Partial<Insert<Equipment, 'equipment_id'>>
 export type LocationInsert       = Insert<Location, 'location_id'>
 export type ManufacturerInsert   = Insert<Manufacturer, 'manufacturer_id'>
 export type TechnicianInsert     = Insert<Technician, 'technician_id'>
